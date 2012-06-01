@@ -2,3 +2,32 @@
 /**
  * Main file for managing general options
  */
+
+/**
+ * Implementation of hook_entity_info()
+ * Registers the content block entity type
+ * 
+ * @return array containing all entitiy options
+ */
+function contentblocks_entity_info() {
+  $options = array(
+      'label' => 'Content Block',
+      'controller class' => 'ContentBlockController',
+      'base table' => 'contentblock',
+      'fieldable' => true,
+      'translation' => array(
+        'locale' => TRUE,
+      ),
+      'entity keys' => array(
+        'id' => 'bid', 
+        'bundle' => 'type',
+      ), 
+      'bundle keys' => array(
+        'bundle' => 'type',
+      ),
+      'bundles' => array(),
+      'view modes' => array()
+  );
+  
+  return $options;
+}
