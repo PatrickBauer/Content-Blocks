@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * Implementation of hook_schema
+ * 
+ * @return array
+ */
 function contentblock_schema() {
   $schema['contentblock'] = array (
     'description' => 'The base table for the contentblock entity',
@@ -9,12 +14,6 @@ function contentblock_schema() {
         'type' => 'serial',
         'unsigned' => TRUE,
         'not null' => TRUE,
-      ),
-      'note' => array(
-        'description' => 'The actual note',
-        'type' => 'varchar',
-        'length' => '255',
-        'not null' => TRUE
       ),
     ),
     'primary key' => array('bid'),
