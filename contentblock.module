@@ -2,6 +2,8 @@
 /**
  * Main file for managing general options
  */
+require_once('contentblock.controller.inc');
+
 
 /**
  * Implementation of hook_entity_info()
@@ -9,7 +11,7 @@
  * 
  * @return array containing all entitiy options
  */
-function contentblocks_entity_info() {
+function contentblock_entity_info() {
   $options = array(
       'contentblock' => array(
         'label' => 'Content Block',
@@ -27,9 +29,115 @@ function contentblocks_entity_info() {
           'bundle' => 'type',
         ),
         'bundles' => array(),
-        'view modes' => array()
+        'view modes' => array(
+          'full' => array(
+            'label' => t('Full contentblock'),
+            'custom settings' => TRUE,
+          ),
+        )
     )
+  );
+  
+  
+  $options['contentblock']['bundles']['headline'] = array(
+    'label' => 'Headline',
+    'admin' => array(
+      'path' => 'admin/structure/contentblock/manage/%block_type',
+      'real path' => 'admin/structure/contentblock/manage/headline',
+      'bundle argument' => 4,
+      'access arguments' => array('administer contentblock types'),
+    ),
   );
   
   return $options;
 }
+
+function th_test() {
+  return 'abc';
+}
+
+/**
+ * Implementation of hook_menu()
+ * @return string
+ */
+function contentblock_menu(){
+  $items['admin/structure/contentblock/manage'] = array(
+    'title' => 'Content Block Admin',
+    'description' => 'Manage content block structure',
+    'page callback' => 'contentblock_info',
+    'access arguments' => array('administer contentblocks'),
+  );
+  
+  $items['admin/structure/contentblock/manage/%block_type'] = array(
+    'title' => 'Edit contentblock type',
+    'title callback' => 'contentblock_type_page_title',
+    'title arguments' => array(4),
+    'page callback' => 'th_test',//'drupal_get_form',
+    'page arguments' => array('contentblock_type_form', 4),
+    'access arguments' => array('administer contentblock types'),
+    //'file' => 'content_types.inc',
+  );
+  
+  $items['admin/structure/contentblock/manage/%block_type/edit'] = array(
+    'title' => 'Edit',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  return $items;
+}
+
+function contentblock_type_page_title($block_type) {
+  return 'Edit ' . $block_type->type . ' block';
+}
+
+function block_type_load() {
+  $a = new stdClass();
+  $a->type = 'headline';
+  return $a;
+}
+
+function contentblock_permission(){
+    return array(
+    'administer contentblocks' =>  array(
+      'title' => t('Administer contentblocks'),
+      'restrict access' => TRUE,
+    ),
+    'view postsits' => array(
+      'title' => t('View content blocks'),
+    )
+  );
+}
+
+function contentblock_info() {
+  return ('Welcome to the administration page for your content blocks!');
+}
+
+/*
+function contentblock_page_view($contentblock, $view_mode = 'full'){
+  $contentblock->content = array();
+
+  // Build fields content.
+  field_attach_prepare_view('contentblock', array($contentblock->pid => $contentblock), $view_mode);
+  entity_prepare_view('contentblock', array($contentblock->pid => $contentblock));
+  $contentblock->content += field_attach_view('contentblock', $contentblock, $view_mode);
+
+  return $contentblock->content;
+}
+
+
+function contentblock_add_form($form, &$form_state, $contentblock) {
+  $form['note'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Note'),
+    '#required' => TRUE,
+  );
+  
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  );
+  
+  field_attach_form('contentblock', $contentblock, $form, $form_state);
+  
+  return $form;
+}
+ */

@@ -13,6 +13,12 @@ function contentblock_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
+      'weight' => array(
+        'description' => 'Value to position the contentblock',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
     ),
     'primary key' => array('bid'),
   );

@@ -3,8 +3,6 @@
 /**
  * Basic controller class 
  */
-class ContentBlockControllerController extends DrupalDefaultEntityController {
+class ContentBlockController extends DrupalDefaultEntityController {
   
 }
-
-var_dump("test");
