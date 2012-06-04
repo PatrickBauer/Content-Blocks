@@ -1,9 +1,7 @@
 <?php
 
 /**
- * Implementation of hook_schema
- * 
- * @return array
+ * Implementation of hook_schema()
  */
 function contentblock_schema() {
   $schema['contentblock'] = array (
