@@ -13,7 +13,7 @@ function contentblocks_entity_info() {
   $options = array(
       'contentblock' => array(
         'label' => 'Content Block',
-        //'controller class' => 'ContentBlockController',
+        'controller class' => 'ContentBlockController',
         'base table' => 'contentblock',
         'fieldable' => true,
         'translation' => array(
