@@ -39,15 +39,17 @@ function contentblock_entity_info() {
     )
   );
   
-  $options['contentblock']['bundles']['headline'] = array(
-    'label' => 'Headline',
-    'admin' => array(
-      'path' => 'admin/structure/contentblock/manage/%block_type',
-      'real path' => 'admin/structure/contentblock/manage/headline',
-      'bundle argument' => 4,
-      'access arguments' => array('administer contentblock types'),
-    ),
-  );
+  foreach(ContentBlockHelper::getInstance()->getBlockTypes() as $type) {
+    $options['contentblock']['bundles'][$type->type] = array(
+      'label' => $type->name,
+      'admin' => array(
+        'path' => 'admin/structure/blocktypes/manage/%block_type',
+        'real path' => 'admin/structure/blocktypes/manage/' . $type->type,
+        'bundle argument' => 4,
+        'access arguments' => array('administer contentblock types'),
+      ),
+    );
+  }
   
   return $options;
 }
@@ -57,22 +59,26 @@ function contentblock_entity_info() {
  * @return string
  */
 function contentblock_menu(){
-  $items['admin/structure/contentblock/manage'] = array(
-    'title' => 'Content Block Admin',
+  $items['admin/structure/blocktypes'] = array(
+    'title' => 'Contentblock types',
     'description' => 'Manage content block structure',
-    'page callback' => 'contentblock_list',
+    'page callback' => 'contentblock_show_list',
     'access arguments' => array('administer contentblocks'),
   );
-  
-  $items['admin/structure/contentblock/manage/add'] = array(
+  $items['admin/structure/types/list'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/structure/blocktypes/add'] = array(
     'title' => 'Add contentblock type',
     'description' => 'Form to add a new contentblocktype',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('contentblock_type_form'),
     'access arguments' => array('administer contentblocks'),
+    'type' => MENU_LOCAL_ACTION,
   );
-  
-  $items['admin/structure/contentblock/manage/%block_type'] = array(
+  $items['admin/structure/blocktypes/manage/%block_type'] = array(
     'title' => 'Edit contentblock type',
     'title callback' => 'contentblock_type_page_title',
     'title arguments' => array(4),
@@ -80,19 +86,25 @@ function contentblock_menu(){
     'page arguments' => array('contentblock_type_form', 4),
     'access arguments' => array('administer contentblock types'),
   );
-  
-  $items['admin/structure/contentblock/manage/%block_type/edit'] = array(
+  $items['admin/structure/blocktypes/manage/%block_type/edit'] = array(
     'title' => 'Edit',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
+  $items['admin/structure/blocktypes/delete/%block_type/delete'] = array(
+    'title' => 'Delete',
+    'page arguments' => array('block_type_delete_confirm', 4),
+    'access arguments' => array('administer content types'),
+    'file' => 'content_types.inc',
+  );
+
   return $items;
 }
 
 /**
- *  
+ * Builds a page title containg the contentblock type name
  */
 function contentblock_type_page_title($block_type) {
-  return 'Edit ' . $block_type->type . ' block';
+  return 'Edit ' . $block_type->name . ' blocktype';
 }
 
 function block_type_load($type) {
@@ -100,11 +112,20 @@ function block_type_load($type) {
   return isset($types[$type]) ? $types[$type] : false;
 }
 
-function contentblock_type_form() {
+function contentblock_type_form($form, $form_state, $type = NULL) {
   $form = array();
+  
+  if(!isset($type->type)) {
+    $type = (object) array(
+        'type' => '', 
+        'name' => '', 
+        'description' => ''
+    );
+  }
   
   $form['name'] = array(
     '#type' => 'textfield',
+    '#default_value' => $type->name,
     '#title' => t('Name'),
     '#required' => TRUE,
     '#description' => t('The human-readable name for this contentblock type'),  
@@ -112,12 +133,18 @@ function contentblock_type_form() {
   
   $form['description'] = array(
     '#type' => 'textarea',
+    '#default_value' => $type->description,
     '#title' => t('Description'),  
+  );
+  
+  $form['old_type'] = array(
+    '#type' => 'value',
+    '#value' => $type->type,
   );
   
    $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Save and add fields'),
+    '#value' => t('Save'),
   );
   
   return $form;
@@ -127,8 +154,39 @@ function contentblock_type_form() {
  * Submit function for the contentblock type form
  * Saves all block attributes in a database table
  */
-function contentblock_type_form_submit() {
+function contentblock_type_form_submit($form, &$form_state) {
+  $existing_type = !empty($form_state['values']['old_type']) ? $form_state['values']['old_type'] : $form_state['values']['type'];
+  $is_existing = (bool) db_query_range('SELECT 1 FROM {contentblock_type} WHERE type = :type', 0, 1, array(':type' => $existing_type))->fetchField();
+  $form_state['values']['type'] = preg_replace('~[^a-z0-9]+~', '_', strtolower($form_state['values']['name']));
   
+  $fields = array(
+      'type' => (string) $form_state['values']['type'],
+      'name' => (string) $form_state['values']['name'],
+      'description' => (string) $form_state['values']['description'],
+  );
+  
+  if ($is_existing) {
+    db_update('contentblock_type')
+      ->fields($fields)
+      ->condition('type', $existing_type)
+      ->execute();
+
+    if (!empty($form_state['values']['old_type']) && $form_state['values']['old_type'] != $form_state['values']['type']) {
+      field_attach_rename_bundle('contentblock', $form_state['values']['old_type'], $form_state['values']['type']);
+    }
+    
+    drupal_set_message(t('Contentblock type successfully updated'));
+  }
+  else {
+    db_insert('contentblock_type')
+      ->fields($fields)
+      ->execute();
+    field_attach_create_bundle('contentblock', $form_state['values']['type']);
+    drupal_set_message(t('Contentblock type successfully added'));
+  }
+  
+  $form_state['redirect'] = 'admin/structure/blocktypes';
+  return;
 }
 
 /**
@@ -144,6 +202,6 @@ function contentblock_permission(){
   );
 }
 
-function contentblock_list() {
+function contentblock_show_list() {
   return ('Welcome to the administration page for your content blocks!');
 }

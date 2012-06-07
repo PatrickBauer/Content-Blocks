@@ -15,11 +15,11 @@ class ContentBlockHelper {
    * Returns the singleton instance
    */
   public static function getInstance() {
-    if($this->instance == NULL){
-      $this->instance = new ContentBlockHelper();
+    if(self::$instance == NULL){
+      self::$instance = new ContentBlockHelper();
     }
     
-    return $this->instance;
+    return self::$instance;
   } 
   
   /**
@@ -38,7 +38,8 @@ class ContentBlockHelper {
      $types = array();
   
     //select all types from database
-    $query = db_select('contentblock_type');
+    $query = db_select('contentblock_type', 'cbt')
+      ->fields('cbt');
 
     //fill array
     foreach ($query->execute() as $type) {
