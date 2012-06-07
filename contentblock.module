@@ -3,6 +3,7 @@
  * Main file for managing general options
  */
 require_once('contentblock.controller.inc');
+require_once('contentblock.helper.inc');
 
 
 /**
@@ -38,7 +39,6 @@ function contentblock_entity_info() {
     )
   );
   
-  
   $options['contentblock']['bundles']['headline'] = array(
     'label' => 'Headline',
     'admin' => array(
@@ -52,10 +52,6 @@ function contentblock_entity_info() {
   return $options;
 }
 
-function th_test() {
-  return 'abc';
-}
-
 /**
  * Implementation of hook_menu()
  * @return string
@@ -64,7 +60,15 @@ function contentblock_menu(){
   $items['admin/structure/contentblock/manage'] = array(
     'title' => 'Content Block Admin',
     'description' => 'Manage content block structure',
-    'page callback' => 'contentblock_info',
+    'page callback' => 'contentblock_list',
+    'access arguments' => array('administer contentblocks'),
+  );
+  
+  $items['admin/structure/contentblock/manage/add'] = array(
+    'title' => 'Add contentblock type',
+    'description' => 'Form to add a new contentblocktype',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('contentblock_type_form'),
     'access arguments' => array('administer contentblocks'),
   );
   
@@ -72,10 +76,9 @@ function contentblock_menu(){
     'title' => 'Edit contentblock type',
     'title callback' => 'contentblock_type_page_title',
     'title arguments' => array(4),
-    'page callback' => 'th_test',//'drupal_get_form',
+    'page callback' => 'drupal_get_form',//'drupal_get_form',
     'page arguments' => array('contentblock_type_form', 4),
     'access arguments' => array('administer contentblock types'),
-    //'file' => 'content_types.inc',
   );
   
   $items['admin/structure/contentblock/manage/%block_type/edit'] = array(
@@ -85,59 +88,62 @@ function contentblock_menu(){
   return $items;
 }
 
+/**
+ *  
+ */
 function contentblock_type_page_title($block_type) {
   return 'Edit ' . $block_type->type . ' block';
 }
 
-function block_type_load() {
-  $a = new stdClass();
-  $a->type = 'headline';
-  return $a;
+function block_type_load($type) {
+  $types = ContentBlockHelper::getInstance()->getBlockTypes();
+  return isset($types[$type]) ? $types[$type] : false;
 }
 
-function contentblock_permission(){
-    return array(
-    'administer contentblocks' =>  array(
-      'title' => t('Administer contentblocks'),
-      'restrict access' => TRUE,
-    ),
-    'view postsits' => array(
-      'title' => t('View content blocks'),
-    )
-  );
-}
-
-function contentblock_info() {
-  return ('Welcome to the administration page for your content blocks!');
-}
-
-/*
-function contentblock_page_view($contentblock, $view_mode = 'full'){
-  $contentblock->content = array();
-
-  // Build fields content.
-  field_attach_prepare_view('contentblock', array($contentblock->pid => $contentblock), $view_mode);
-  entity_prepare_view('contentblock', array($contentblock->pid => $contentblock));
-  $contentblock->content += field_attach_view('contentblock', $contentblock, $view_mode);
-
-  return $contentblock->content;
-}
-
-
-function contentblock_add_form($form, &$form_state, $contentblock) {
-  $form['note'] = array(
+function contentblock_type_form() {
+  $form = array();
+  
+  $form['name'] = array(
     '#type' => 'textfield',
-    '#title' => t('Note'),
+    '#title' => t('Name'),
     '#required' => TRUE,
+    '#description' => t('The human-readable name for this contentblock type'),  
   );
   
-  $form['submit'] = array(
+  $form['description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),  
+  );
+  
+   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Save'),
+    '#value' => t('Save and add fields'),
   );
-  
-  field_attach_form('contentblock', $contentblock, $form, $form_state);
   
   return $form;
 }
+
+/**
+ * Submit function for the contentblock type form
+ * Saves all block attributes in a database table
  */
+function contentblock_type_form_submit() {
+  
+}
+
+/**
+ * Implementation of hook_permissions()
+ * Defines standard permissions to administer and use contentblocks
+ */
+function contentblock_permission(){
+    return array(
+    'administer contentblocks' =>  array(
+      'title' => t('Administer contentblock types'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+function contentblock_list() {
+  return ('Welcome to the administration page for your content blocks!');
+}

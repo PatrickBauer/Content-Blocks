@@ -23,5 +23,29 @@ function contentblock_schema() {
     'primary key' => array('bid'),
   );
   
+  $schema['contentblock_type'] = array (
+    'description' => 'The table for storing multiple contentblock types (bundles)',
+    'fields' => array(
+      'type' => array(
+        'description' => 'The machine-readable name',
+        'type' => 'varchar',
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'The human-readable name',
+        'type' => 'varchar',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'description' => array(
+        'description' => 'Text to describe the type',
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('type'),
+  );
+  
   return $schema;
 }
