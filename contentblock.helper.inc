@@ -25,8 +25,8 @@ class ContentBlockHelper {
   /**
    * Returns a list of all available contentblock types
    */
-  public function getBlockTypes() {
-    if($this->block_types == NULL) {
+  public function getBlockTypes($rebuild = false) {
+    if($rebuild || $this->block_types == NULL) {
       $this->block_types = $this->buildBlockTypes();
     }
     

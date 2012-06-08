@@ -39,7 +39,7 @@ function contentblock_entity_info() {
     )
   );
   
-  foreach(ContentBlockHelper::getInstance()->getBlockTypes() as $type) {
+  foreach(ContentBlockHelper::getInstance()->getBlockTypes(true) as $type) {
     $options['contentblock']['bundles'][$type->type] = array(
       'label' => $type->name,
       'admin' => array(
@@ -90,14 +90,52 @@ function contentblock_menu(){
     'title' => 'Edit',
     'type' => MENU_DEFAULT_LOCAL_TASK,
   );
-  $items['admin/structure/blocktypes/delete/%block_type/delete'] = array(
+  $items['admin/structure/blocktypes/manage/%block_type/delete'] = array(
     'title' => 'Delete',
-    'page arguments' => array('block_type_delete_confirm', 4),
+    'page arguments' => array('contentblock_type_delete_confirm', 4),
     'access arguments' => array('administer content types'),
-    'file' => 'content_types.inc',
   );
 
   return $items;
+}
+
+function contentblock_type_delete_confirm($form, &$form_state, $type) {
+  $form['type'] = array('#type' => 'value', '#value' => $type->type);
+  $form['name'] = array('#type' => 'value', '#value' => $type->name);
+
+  $message = t('Are you sure you want to delete the contentblock type %type?', array('%type' => $type->name));
+  $caption = '';
+
+  $num_nodes = db_query("SELECT COUNT(*) FROM {contentblock} WHERE type = :type", array(':type' => $type->type))->fetchField();
+  if ($num_nodes) {
+    $caption .= '<p>' . format_plural($num_nodes, '%type is used by 1 block on your site. If you remove this contentblock type, <strong>all blocks</strong> using the %type type will be <strong>pemanently deleted</strong>.', '%type is used by @count blocks on your site. If you remove this contentblock type, <strong>all blocks</strong> using the %type type will be <strong>pemanently deleted</strong>.', array('%type' => $type->name)) . '</p>';
+  }
+
+  $caption .= '<p>' . t('This action cannot be undone.') . '</p>';
+  return confirm_form($form, $message, 'admin/structure/blocktypes', $caption, t('Delete'));
+}
+
+function contentblock_type_delete_confirm_submit($form, &$form_state) {
+  $type = $form_state['values']['type'];
+  
+  //delete all blocks from deleted type
+  db_delete('contentblock')
+    ->condition('type', $type)
+    ->execute();
+  
+  //delete blocktype from database
+  db_delete('contentblock_type')
+    ->condition('type', $type)
+    ->execute();
+  
+  //delete all coresponding fields
+  field_attach_delete_bundle('contentblock', $type);
+  
+  drupal_set_message(t('The contentblock type %name has been deleted.', array('%name' => $form_state['values']['name'])));
+  menu_rebuild();
+
+  $form_state['redirect'] = 'admin/structure/blocktypes';
+  return;
 }
 
 /**
@@ -131,6 +169,16 @@ function contentblock_type_form($form, $form_state, $type = NULL) {
     '#description' => t('The human-readable name for this contentblock type'),  
   );
   
+  $form['type'] = array(
+    '#type' => 'machine_name',
+    '#default_value' => $type->type,
+    '#maxlength' => 32,
+    '#machine_name' => array(
+      'exists' => 'block_type_load',
+    ),
+    '#description' => t('The machine-readable name for this contentblock type'),  
+  );
+  
   $form['description'] = array(
     '#type' => 'textarea',
     '#default_value' => $type->description,
@@ -150,6 +198,16 @@ function contentblock_type_form($form, $form_state, $type = NULL) {
   return $form;
 }
 
+
+function contentblock_type_form_validate($form, &$form_state) {
+  $types = ContentBlockHelper::getInstance()->getBlockTypes();
+  $type = db_query_range('SELECT type FROM {contentblock_type} WHERE name = :name', 0, 1, array(':name' => $form_state['values']['name']))->fetchField();
+  
+  if (!empty($type) && $types[$type]->type != $form_state['values']['old_type']) {
+    form_set_error('name', t('The human-readable name %name is already taken.', array('%name' => $form_state['values']['name'])));
+  }
+}
+
 /**
  * Submit function for the contentblock type form
  * Saves all block attributes in a database table
@@ -157,7 +215,6 @@ function contentblock_type_form($form, $form_state, $type = NULL) {
 function contentblock_type_form_submit($form, &$form_state) {
   $existing_type = !empty($form_state['values']['old_type']) ? $form_state['values']['old_type'] : $form_state['values']['type'];
   $is_existing = (bool) db_query_range('SELECT 1 FROM {contentblock_type} WHERE type = :type', 0, 1, array(':type' => $existing_type))->fetchField();
-  $form_state['values']['type'] = preg_replace('~[^a-z0-9]+~', '_', strtolower($form_state['values']['name']));
   
   $fields = array(
       'type' => (string) $form_state['values']['type'],
@@ -173,6 +230,11 @@ function contentblock_type_form_submit($form, &$form_state) {
 
     if (!empty($form_state['values']['old_type']) && $form_state['values']['old_type'] != $form_state['values']['type']) {
       field_attach_rename_bundle('contentblock', $form_state['values']['old_type'], $form_state['values']['type']);
+      
+      db_update('contentblock')
+        ->fields(array('type' => $form_state['values']['type']))
+        ->condition('type', $form_state['values']['old_type'])
+        ->execute();
     }
     
     drupal_set_message(t('Contentblock type successfully updated'));
@@ -184,6 +246,8 @@ function contentblock_type_form_submit($form, &$form_state) {
     field_attach_create_bundle('contentblock', $form_state['values']['type']);
     drupal_set_message(t('Contentblock type successfully added'));
   }
+  
+  menu_rebuild();
   
   $form_state['redirect'] = 'admin/structure/blocktypes';
   return;
@@ -203,5 +267,54 @@ function contentblock_permission(){
 }
 
 function contentblock_show_list() {
-  return ('Welcome to the administration page for your content blocks!');
+  $types = ContentBlockHelper::getInstance()->getBlockTypes();
+  $header = array(t('Name'), array('data' => t('Operations'), 'colspan' => '4'));
+  $rows = array();
+  
+  foreach ($types as $type) {    
+    $row = array(theme('contentblock_admin_overview', array('type' => $type)));
+    
+    // Set the edit column.
+    $row[] = array('data' => l(t('edit'), 'admin/structure/blocktypes/manage/' . $type->type));
+
+    // Manage fields.
+    $row[] = array('data' => l(t('manage fields'), 'admin/structure/blocktypes/manage/' . $type->type . '/fields'));
+
+    // Display fields.
+    $row[] = array('data' => l(t('manage display'), 'admin/structure/blocktypes/manage/' . $type->type . '/display'));
+    
+    // Set the delete column.
+    $row[] = array('data' => l(t('delete'), 'admin/structure/blocktypes/manage/' . $type->type . '/delete'));
+        
+    $rows[] = $row;
+  }
+
+  $build['contentblock_table'] = array(
+    '#theme' => 'table',
+    '#header' => $header,
+    '#rows' => $rows,
+    '#empty' => t('No contentblock types available. <a href="@link">Add contentblock type</a>.', array('@link' => url('admin/structure/blocktypes/add'))),
+  );
+
+  return $build;
+}
+
+function theme_contentblock_admin_overview($variables) {
+  $type = $variables['type'];
+
+  $output = check_plain($type->name);
+  $output .= ' <small>' . t('(Machine name: @type)', array('@type' => $type->type)) . '</small>';
+  $output .= '<div class="description">' . filter_xss_admin($type->description) . '</div>';
+  return $output;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function contentblock_theme() {
+  return array(
+    'contentblock_admin_overview' => array(
+      'variables' => array('type' => NULL),
+    ),
+  );
 }

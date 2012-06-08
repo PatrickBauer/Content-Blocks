@@ -13,6 +13,12 @@ function contentblock_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
+      'type' => array(
+        'description' => 'The contentblocktype',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+      ),
       'weight' => array(
         'description' => 'Value to position the contentblock',
         'type' => 'int',
