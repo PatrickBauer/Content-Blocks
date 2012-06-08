@@ -1,10 +1,10 @@
 <?php
+
 /**
  * Main file for managing general options
  */
 require_once('contentblock.controller.inc');
 require_once('contentblock.helper.inc');
-
 
 /**
  * Implementation of hook_entity_info()
@@ -14,32 +14,32 @@ require_once('contentblock.helper.inc');
  */
 function contentblock_entity_info() {
   $options = array(
-      'contentblock' => array(
-        'label' => 'Content Block',
-        'controller class' => 'ContentBlockController',
-        'base table' => 'contentblock',
-        'fieldable' => true,
-        'translation' => array(
-          'locale' => TRUE,
+    'contentblock' => array(
+      'label' => 'Content Block',
+      'controller class' => 'ContentBlockController',
+      'base table' => 'contentblock',
+      'fieldable' => true,
+      'translation' => array(
+        'locale' => TRUE,
+      ),
+      'entity keys' => array(
+        'id' => 'bid',
+        'bundle' => 'type',
+      ),
+      'bundle keys' => array(
+        'bundle' => 'type',
+      ),
+      'bundles' => array(),
+      'view modes' => array(
+        'full' => array(
+          'label' => t('Full contentblock'),
+          'custom settings' => TRUE,
         ),
-        'entity keys' => array(
-          'id' => 'bid', 
-          'bundle' => 'type',
-        ), 
-        'bundle keys' => array(
-          'bundle' => 'type',
-        ),
-        'bundles' => array(),
-        'view modes' => array(
-          'full' => array(
-            'label' => t('Full contentblock'),
-            'custom settings' => TRUE,
-          ),
-        )
+      )
     )
   );
-  
-  foreach(ContentBlockHelper::getInstance()->getBlockTypes(true) as $type) {
+
+  foreach (ContentBlockHelper::getInstance()->getBlockTypes(true) as $type) {
     $options['contentblock']['bundles'][$type->type] = array(
       'label' => $type->name,
       'admin' => array(
@@ -50,7 +50,7 @@ function contentblock_entity_info() {
       ),
     );
   }
-  
+
   return $options;
 }
 
@@ -58,14 +58,14 @@ function contentblock_entity_info() {
  * Implementation of hook_menu()
  * @return string
  */
-function contentblock_menu(){
+function contentblock_menu() {
   $items['admin/structure/blocktypes'] = array(
     'title' => 'Contentblock types',
     'description' => 'Manage content block structure',
     'page callback' => 'contentblock_show_list',
     'access arguments' => array('administer contentblocks'),
   );
-  $items['admin/structure/types/list'] = array(
+  $items['admin/structure/blocktypes/list'] = array(
     'title' => 'List',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
@@ -82,7 +82,7 @@ function contentblock_menu(){
     'title' => 'Edit contentblock type',
     'title callback' => 'contentblock_type_page_title',
     'title arguments' => array(4),
-    'page callback' => 'drupal_get_form',//'drupal_get_form',
+    'page callback' => 'drupal_get_form',
     'page arguments' => array('contentblock_type_form', 4),
     'access arguments' => array('administer contentblock types'),
   );
@@ -117,20 +117,20 @@ function contentblock_type_delete_confirm($form, &$form_state, $type) {
 
 function contentblock_type_delete_confirm_submit($form, &$form_state) {
   $type = $form_state['values']['type'];
-  
+
   //delete all blocks from deleted type
   db_delete('contentblock')
     ->condition('type', $type)
     ->execute();
-  
+
   //delete blocktype from database
   db_delete('contentblock_type')
     ->condition('type', $type)
     ->execute();
-  
+
   //delete all coresponding fields
   field_attach_delete_bundle('contentblock', $type);
-  
+
   drupal_set_message(t('The contentblock type %name has been deleted.', array('%name' => $form_state['values']['name'])));
   menu_rebuild();
 
@@ -142,7 +142,7 @@ function contentblock_type_delete_confirm_submit($form, &$form_state) {
  * Builds a page title containg the contentblock type name
  */
 function contentblock_type_page_title($block_type) {
-  return 'Edit ' . $block_type->name . ' blocktype';
+  return $block_type->name;
 }
 
 function block_type_load($type) {
@@ -152,23 +152,23 @@ function block_type_load($type) {
 
 function contentblock_type_form($form, $form_state, $type = NULL) {
   $form = array();
-  
-  if(!isset($type->type)) {
+
+  if (!isset($type->type)) {
     $type = (object) array(
-        'type' => '', 
-        'name' => '', 
+        'type' => '',
+        'name' => '',
         'description' => ''
     );
   }
-  
+
   $form['name'] = array(
     '#type' => 'textfield',
     '#default_value' => $type->name,
     '#title' => t('Name'),
     '#required' => TRUE,
-    '#description' => t('The human-readable name for this contentblock type'),  
+    '#description' => t('The human-readable name for this contentblock type'),
   );
-  
+
   $form['type'] = array(
     '#type' => 'machine_name',
     '#default_value' => $type->type,
@@ -176,33 +176,32 @@ function contentblock_type_form($form, $form_state, $type = NULL) {
     '#machine_name' => array(
       'exists' => 'block_type_load',
     ),
-    '#description' => t('The machine-readable name for this contentblock type'),  
+    '#description' => t('The machine-readable name for this contentblock type'),
   );
-  
+
   $form['description'] = array(
     '#type' => 'textarea',
     '#default_value' => $type->description,
-    '#title' => t('Description'),  
+    '#title' => t('Description'),
   );
-  
+
   $form['old_type'] = array(
     '#type' => 'value',
     '#value' => $type->type,
   );
-  
-   $form['submit'] = array(
+
+  $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
   );
-  
+
   return $form;
 }
-
 
 function contentblock_type_form_validate($form, &$form_state) {
   $types = ContentBlockHelper::getInstance()->getBlockTypes();
   $type = db_query_range('SELECT type FROM {contentblock_type} WHERE name = :name', 0, 1, array(':name' => $form_state['values']['name']))->fetchField();
-  
+
   if (!empty($type) && $types[$type]->type != $form_state['values']['old_type']) {
     form_set_error('name', t('The human-readable name %name is already taken.', array('%name' => $form_state['values']['name'])));
   }
@@ -215,13 +214,13 @@ function contentblock_type_form_validate($form, &$form_state) {
 function contentblock_type_form_submit($form, &$form_state) {
   $existing_type = !empty($form_state['values']['old_type']) ? $form_state['values']['old_type'] : $form_state['values']['type'];
   $is_existing = (bool) db_query_range('SELECT 1 FROM {contentblock_type} WHERE type = :type', 0, 1, array(':type' => $existing_type))->fetchField();
-  
+
   $fields = array(
-      'type' => (string) $form_state['values']['type'],
-      'name' => (string) $form_state['values']['name'],
-      'description' => (string) $form_state['values']['description'],
+    'type' => (string) $form_state['values']['type'],
+    'name' => (string) $form_state['values']['name'],
+    'description' => (string) $form_state['values']['description'],
   );
-  
+
   if ($is_existing) {
     db_update('contentblock_type')
       ->fields($fields)
@@ -230,25 +229,24 @@ function contentblock_type_form_submit($form, &$form_state) {
 
     if (!empty($form_state['values']['old_type']) && $form_state['values']['old_type'] != $form_state['values']['type']) {
       field_attach_rename_bundle('contentblock', $form_state['values']['old_type'], $form_state['values']['type']);
-      
+
       db_update('contentblock')
         ->fields(array('type' => $form_state['values']['type']))
         ->condition('type', $form_state['values']['old_type'])
         ->execute();
     }
-    
+
     drupal_set_message(t('Contentblock type successfully updated'));
-  }
-  else {
+  } else {
     db_insert('contentblock_type')
       ->fields($fields)
       ->execute();
     field_attach_create_bundle('contentblock', $form_state['values']['type']);
     drupal_set_message(t('Contentblock type successfully added'));
   }
-  
+
   menu_rebuild();
-  
+
   $form_state['redirect'] = 'admin/structure/blocktypes';
   return;
 }
@@ -257,9 +255,9 @@ function contentblock_type_form_submit($form, &$form_state) {
  * Implementation of hook_permissions()
  * Defines standard permissions to administer and use contentblocks
  */
-function contentblock_permission(){
-    return array(
-    'administer contentblocks' =>  array(
+function contentblock_permission() {
+  return array(
+    'administer contentblocks' => array(
       'title' => t('Administer contentblock types'),
       'restrict access' => TRUE,
     ),
@@ -270,10 +268,10 @@ function contentblock_show_list() {
   $types = ContentBlockHelper::getInstance()->getBlockTypes();
   $header = array(t('Name'), array('data' => t('Operations'), 'colspan' => '4'));
   $rows = array();
-  
-  foreach ($types as $type) {    
+
+  foreach ($types as $type) {
     $row = array(theme('contentblock_admin_overview', array('type' => $type)));
-    
+
     // Set the edit column.
     $row[] = array('data' => l(t('edit'), 'admin/structure/blocktypes/manage/' . $type->type));
 
@@ -282,10 +280,10 @@ function contentblock_show_list() {
 
     // Display fields.
     $row[] = array('data' => l(t('manage display'), 'admin/structure/blocktypes/manage/' . $type->type . '/display'));
-    
+
     // Set the delete column.
     $row[] = array('data' => l(t('delete'), 'admin/structure/blocktypes/manage/' . $type->type . '/delete'));
-        
+
     $rows[] = $row;
   }
 
@@ -317,4 +315,47 @@ function contentblock_theme() {
       'variables' => array('type' => NULL),
     ),
   );
+}
+
+function contentblock_admin_menu_map() {
+  $map = array();
+
+  if (!user_access('administer contentblock types')) {
+    return;
+  }
+
+  foreach (entity_get_info() as $obj_type => $info) {
+    foreach ($info['bundles'] as $bundle_name => $bundle_info) {
+      if (isset($bundle_info['admin'])) {
+        $arguments = array();
+        switch ($obj_type) {
+          case 'contentblock':
+            $fields = array();
+            foreach (field_info_instances($obj_type, $bundle_name) as $field) {
+              $fields[] = $field['field_name'];
+            }
+            $arguments = array(
+              '%block_type' => array($bundle_name),
+              '%field_ui_menu' => $fields,
+            );
+            break;
+        }
+        if (!empty($arguments)) {
+          $path = $bundle_info['admin']['path'];
+          $map["$path/fields/%field_ui_menu"]['parent'] = $path . "/fields";
+          $map["$path/fields/%field_ui_menu"]['arguments'][] = $arguments;
+        }
+      }
+    }
+  }
+
+
+  $map['admin/structure/blocktypes/manage/%block_type'] = array(
+    'parent' => 'admin/structure/blocktypes',
+    'arguments' => array(
+      array('%block_type' => array_keys(ContentBlockHelper::getInstance()->getBlockTypes())),
+    ),
+  );
+
+  return $map;
 }
