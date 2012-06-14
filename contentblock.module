@@ -5,6 +5,7 @@
  */
 require_once('contentblock.controller.inc');
 require_once('contentblock.helper.inc');
+require_once('contentblock.field.inc');
 
 /**
  * Implementation of hook_entity_info()
