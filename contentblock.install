@@ -49,3 +49,23 @@ function contentblock_schema() {
   
   return $schema;
 }
+
+function contentblock_field_schema($field) {
+  $columns = array(
+    'bid' => array(
+      'type' => 'int',
+      'size' => 'normal',
+      'not null' => TRUE,
+      'unsigned' => TRUE,
+    ),
+  );
+  
+  $indexes = array(
+    'bid' => array('bid'),
+  );
+    
+  return array(
+    'columns' => $columns, 
+    'indexes' => $indexes,
+  );
+}
