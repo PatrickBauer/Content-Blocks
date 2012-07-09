@@ -58,6 +58,11 @@ function contentblock_field_schema($field) {
       'not null' => TRUE,
       'unsigned' => TRUE,
     ),
+    'type' => array(
+      'type' => 'varchar',
+      'length' => 32,
+      'not null' => TRUE,
+    ),
   );
   
   $indexes = array(

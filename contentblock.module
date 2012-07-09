@@ -20,6 +20,7 @@ function contentblock_entity_info() {
       'controller class' => 'ContentBlockController',
       'base table' => 'contentblock',
       'fieldable' => true,
+      'static cache' => FALSE,
       'translation' => array(
         'locale' => TRUE,
       ),
@@ -314,6 +315,16 @@ function contentblock_theme() {
   return array(
     'contentblock_admin_overview' => array(
       'variables' => array('type' => NULL),
+    ),
+    
+    'contentblock_element' => array(
+      'render element' => 'element',
+    ),
+    'contentblock_widget' => array(
+      'render element' => 'element',
+    ),
+    'contentblock_widget_multiple' => array(
+      'render element' => 'element',
     ),
   );
 }
