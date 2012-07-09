@@ -19,6 +19,13 @@ function contentblock_field_widget_form(&$form, &$form_state, $field, $instance,
   $elements = array();
   $types = ContentBlockHelper::getInstance()->getBlockTypes();
   
+  if(count($types) == 0) {
+    return $element += array(
+      '#type' => 'item',
+      '#markup' => t('There are no blocktypes available. Please add at least one blocktype.'),
+    );
+  }
+  
   $field_state = field_form_get_state($element['#field_parents'], $field['field_name'], $langcode, $form_state);
   if (isset($field_state['items'])) {
     $items = $field_state['items'];
