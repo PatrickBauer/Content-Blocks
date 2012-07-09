@@ -20,7 +20,7 @@ function contentblock_entity_info() {
       'controller class' => 'ContentBlockController',
       'base table' => 'contentblock',
       'fieldable' => true,
-      'static cache' => FALSE,
+      'static cache' => TRUE,
       'translation' => array(
         'locale' => TRUE,
       ),
