@@ -45,12 +45,12 @@ function contentblock_field_widget_form(&$form, &$form_state, $field, $instance,
         $elements[$delta]['#element_validate'] = array('contentblock_widget_default_validate');
              
         $elements[$delta]['bid'] = $element + array(
-          '#type' => 'value',
+          '#type' => 'hidden',
           '#value' => $item['bid'],
         );
         
         $elements[$delta]['type'] = $element + array(
-          '#type' => 'value',
+          '#type' => 'hidden',
           '#value' => $item['type'],
         );
                 
@@ -60,8 +60,20 @@ function contentblock_field_widget_form(&$form, &$form_state, $field, $instance,
           '#parents' => array_merge($element['#field_parents'], array($element['#field_name'], $element['#language'], $delta, 'fields')),
         );
         
+        $elements[$delta]['fields']['remove_block'] = $element + array(
+          '#type' => 'submit',
+          '#submit' => array('contentblock_default_remove_block'),
+          '#limit_validation_errors' => array(), //array(array_merge($element['#field_parents'], array($element['#field_name'], $element['#language']))),
+          '#value' => 'Remove block',
+          '#weight' => 200,
+          '#delta' => $delta,
+          '#parents' => array_merge($element['#field_parents'], array($element['#field_name'], $element['#language'], $delta, 'fields', 'remove_block')),
+        );
+        
         $block = entity_load('contentblock', array($item['bid']), array(), TRUE);
         field_attach_form('contentblock', $block[$item['bid']], $elements[$delta]['fields'], $form_state);
+        
+                
         
         $delta++;
       }
@@ -91,7 +103,7 @@ function contentblock_field_widget_form(&$form, &$form_state, $field, $instance,
         $elements[$delta]['add_block'] = $element + array(
           '#type' => 'submit',
           '#submit' => array('contentblock_default_add_block'),
-          '#limit_validation_errors' => array(array_merge($element['#field_parents'], array($element['#field_name'], $element['#language']))),
+          '#limit_validation_errors' => array(), //array(array_merge($element['#field_parents'], array($element['#field_name'], $element['#language']))),
           '#value' => 'Add new block',
         );
       }
@@ -104,6 +116,40 @@ function contentblock_field_widget_form(&$form, &$form_state, $field, $instance,
   }
   
   return $elements;
+}
+
+/**
+ * Submit function for the remove block button 
+ */
+function contentblock_default_remove_block(&$form, &$form_state) {
+  $parents = $form_state['triggering_element']['#array_parents'];
+  dpm($form_state);
+  dpm($form);
+  array_pop($parents);array_pop($parents);
+  $element = drupal_array_get_nested_value($form, $parents);
+  
+  dpm($element);
+  
+  $button = $form_state['triggering_element'];
+  $meta = drupal_array_get_nested_value($form, array_slice($button['#array_parents'], 0, -2));
+  
+  $field_state = field_form_get_state($meta['#field_parents'], $meta['#field_name'], $meta['#language'], $form_state);
+  $field_state['items'] = array();
+
+  $submitted_values = drupal_array_get_nested_value($form_state['input'], array_slice($button['#array_parents'], 0, -2));
+  
+  foreach ($submitted_values as $delta => $submitted_value) {
+    if ($submitted_value['bid'] == $element['bid']['#value']) {
+      continue;
+    }
+  
+    $field_state['items'][] = $submitted_value;
+  }
+
+  field_form_set_state($meta['#field_parents'], $meta['#field_name'], $meta['#language'], $form_state, $field_state);
+  drupal_array_set_nested_value($form_state['values'], array_slice($button['#array_parents'], 0, -2), $field_state['items']);
+
+  $form_state['rebuild'] = TRUE;
 }
 
 /**
@@ -124,7 +170,14 @@ function contentblock_default_add_block(&$form, &$form_state) {
     
     $field_state['items'] = array();
         
-    $submitted_values = drupal_array_get_nested_value($form_state['values'], array_slice($button['#array_parents'], 0, -2));
+    dpm($form_state['values']);
+    
+    //$submitted_values = drupal_array_get_nested_value($form_state['values'], array_slice($button['#array_parents'], 0, -2));
+    //dpm($submitted_values);
+    $submitted_values = drupal_array_get_nested_value($form_state['input'], array_slice($button['#array_parents'], 0, -2));
+    //dpm($submitted_values);
+    
+    
     foreach ($submitted_values as $delta => $submitted_value) {
       if (!$submitted_value['bid']) {
         unset($submitted_values[$delta]);
