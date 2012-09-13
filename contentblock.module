@@ -150,9 +150,11 @@ function contentblock_theme() {
     'contentblock_element' => array(
       'render element' => 'element',
     ),
+    
     'contentblock_widget' => array(
       'render element' => 'element',
     ),
+    
     'contentblock_widget_multiple' => array(
       'render element' => 'element',
     ),
