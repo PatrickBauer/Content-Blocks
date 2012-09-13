@@ -1,7 +1,14 @@
 <?php
 
 /**
+ * Installation File 
+ * Used to install and uninstall the needed database tables
+ */
+
+
+/**
  * Implementation of hook_schema()
+ * Inserts all needed module tables into the database
  */
 function contentblock_schema() {
   $schema['contentblock'] = array (
@@ -50,6 +57,10 @@ function contentblock_schema() {
   return $schema;
 }
 
+/**
+ * Implementation of hook_field_schema()
+ * Inserts all needed field tables into the database
+ */
 function contentblock_field_schema($field) {
   $columns = array(
     'bid' => array(

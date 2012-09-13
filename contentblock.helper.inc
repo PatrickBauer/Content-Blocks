@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * Helper class needed at serveral locations
+ * Defines ContentBlockHelper as a singleton class, used for repetetive tasks
+ */
+
 class ContentBlockHelper {
   /**
    * Singleton instance
@@ -7,7 +12,7 @@ class ContentBlockHelper {
   private static $instance = NULL;
   
   /**
-   * Array of all available contentblock types
+   * Array of all available blocktypes
    */
   private $block_types = NULL;
   
@@ -23,7 +28,7 @@ class ContentBlockHelper {
   } 
   
   /**
-   * Returns a list of all available contentblock types
+   * Returns a list of all available blocktypes
    */
   public function getBlockTypes($rebuild = false) {
     if($rebuild || $this->block_types == NULL) {
@@ -33,7 +38,9 @@ class ContentBlockHelper {
     return $this->block_types;
   }
   
-  
+  /**
+   * Builds an array containing all available blocktypes
+   */
   private function buildBlockTypes() {
      $types = array();
   
@@ -48,6 +55,4 @@ class ContentBlockHelper {
 
     return $types;
   }
-  
-  
 }

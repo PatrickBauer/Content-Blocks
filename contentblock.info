@@ -2,5 +2,5 @@ name = Content Blocks
 description = Provides a new way for managing content via block based interfaces
 core = 7.x
 package = Content Blocks
-#dependencies[] = entity
+
 dependencies[] = field_ui
